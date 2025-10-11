@@ -19,6 +19,7 @@ Key goals:
 
 ## High-level Architecture
 ```mermaid
+%%{init: {'flowchart': {'curve': 'linear'}} }%%
 flowchart LR
 
   %% ====== STYLES ======
@@ -27,6 +28,9 @@ flowchart LR
   classDef data fill:#eef7ff,stroke:#5b9bd5,color:#111;
   classDef net fill:#e6fffb,stroke:#13c2c2,color:#111;
   classDef cidr fill:#ffffff,stroke:#bfbfbf,color:#333,stroke-dasharray: 5 4;
+
+  %% Tăng độ dày mũi tên mặc định
+  linkStyle default stroke:#5c5c5c,stroke-width:2.2px;
 
   %% ====== LEFT: EDGE & IOT ======
   subgraph EDGE["Edge & Clients"]
@@ -67,7 +71,7 @@ flowchart LR
       alb["Application Load Balancer"]
       bastion["SSM Bastion (no inbound)"]
       nat["NAT Gateway (per AZ)"]
-      waf --> alb
+      waf ==> alb
     end
 
     %% PRIVATE
@@ -99,27 +103,33 @@ flowchart LR
     glue["Glue Data Catalog"]
     athena["Athena"]
     ddb["DynamoDB (Telemetry)"]
-    s3 --> athena
-    glue --> athena
+    s3 ==> athena
+    glue -.-> athena
   end
   class REG zone
 
-  %% ====== FLOWS (tối giản) ======
-  clients --> waf
-  iotdev --> iotcore
+  %% ====== FLOWS (đậm = đường chính; chấm = nội bộ/private) ======
+  %% Edge / IoT ingress
+  clients ==> waf
+  iotdev ==> iotcore
 
-  firehose --> s3
+  %% Streaming to storage (regional)
+  firehose ==> s3
 
-  alb --> eks
-  alb --> legacy
+  %% ALB to workloads
+  alb ==> eks
+  alb ==> legacy
 
-  eks --> aur
-  legacy --> aur
+  %% Workloads to database (inside VPC)
+  eks ==> aur
+  legacy ==> aur
 
-  eks --> vpce
-  legacy --> vpce
-  vpce --> s3
-  vpce --> ddb
+  %% Workloads to Regional via VPC Endpoints
+  eks -.-> vpce
+  legacy -.-> vpce
+  vpce -.-> s3
+  vpce -.-> ddb
+
 
 ```
 
