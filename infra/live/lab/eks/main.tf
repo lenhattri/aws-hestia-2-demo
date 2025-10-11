@@ -59,7 +59,6 @@ module "eks" {
   vpc_id             = data.terraform_remote_state.vpc.outputs.vpc_id
   private_subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnet_ids
   secrets_kms_key_arn = data.terraform_remote_state.data.outputs.secrets_kms_key_arn
-  log_kms_key_arn     = data.terraform_remote_state.data.outputs.data_kms_key_arn
   node_instance_type  = var.eks_instance_type
   node_desired_size   = var.node_desired_size
   node_min_size       = var.eks_node_min

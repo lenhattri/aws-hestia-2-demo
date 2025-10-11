@@ -30,7 +30,7 @@ variable "stream_mode" {
 variable "kinesis_mode" {
   description = "Stream mode override used in lab deployments."
   type        = string
-  default     = "provisioned"
+  default     = "firehose-only"
 }
 
 variable "kms_key_arn" {

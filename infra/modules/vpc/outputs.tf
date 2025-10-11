@@ -5,17 +5,17 @@ output "vpc_id" {
 
 output "public_subnet_ids" {
   description = "List of public subnet IDs."
-  value       = [for s in aws_subnet.public : s.id]
+  value       = [for az in local.ordered_public_azs : aws_subnet.public[az].id]
 }
 
 output "private_subnet_ids" {
   description = "List of private subnet IDs."
-  value       = [for s in aws_subnet.private : s.id]
+  value       = [for az in local.ordered_private_azs : aws_subnet.private[az].id]
 }
 
 output "isolated_subnet_ids" {
   description = "List of isolated subnet IDs."
-  value       = [for s in aws_subnet.isolated : s.id]
+  value       = [for az in local.ordered_isolated_azs : aws_subnet.isolated[az].id]
 }
 
 output "public_subnet_map" {
@@ -57,3 +57,9 @@ output "isolated_route_table_ids" {
   description = "Map of AZ to isolated route table IDs."
   value       = { for k, rt in aws_route_table.isolated : k => rt.id }
 }
+locals {
+  ordered_public_azs  = [for subnet in var.public_subnets : subnet.az]
+  ordered_private_azs = [for subnet in var.private_subnets : subnet.az]
+  ordered_isolated_azs = [for subnet in var.isolated_subnets : subnet.az]
+}
+

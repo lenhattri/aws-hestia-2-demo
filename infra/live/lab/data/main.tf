@@ -29,7 +29,6 @@ locals {
 resource "aws_cloudwatch_log_group" "firehose" {
   name              = local.firehose_log_group_name
   retention_in_days = var.cloudwatch_log_retention_days
-  kms_key_id        = data.terraform_remote_state.s3.outputs.kms_key_arn
   tags              = merge(local.default_tags, { Module = "logs" })
 }
 

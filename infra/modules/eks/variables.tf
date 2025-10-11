@@ -36,8 +36,9 @@ variable "secrets_kms_key_arn" {
 }
 
 variable "log_kms_key_arn" {
-  description = "KMS key ARN for log encryption."
+  description = "(Deprecated) KMS key ARN for log encryption."
   type        = string
+  default     = null
 }
 
 variable "log_retention_in_days" {
