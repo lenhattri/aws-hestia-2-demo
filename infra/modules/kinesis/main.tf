@@ -2,21 +2,6 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "kinesis"
   })
-
-  effective_shard_count = var.is_lab ? var.kinesis_shards : var.shard_count
-  effective_stream_mode = upper(var.is_lab ? var.kinesis_mode : var.stream_mode)
-}
-
-resource "aws_kinesis_stream" "this" {
-  name             = var.stream_name
-  shard_count      = local.effective_shard_count
-  retention_period = var.retention_hours
-  encryption_type  = "KMS"
-  kms_key_id       = var.kms_key_arn
-  stream_mode_details {
-    stream_mode = local.effective_stream_mode
-  }
-  tags = local.merged_tags
 }
 
 resource "aws_glue_catalog_database" "this" {
@@ -104,16 +89,16 @@ data "aws_iam_policy_document" "firehose" {
     actions   = ["logs:PutLogEvents"]
     resources = ["${var.firehose_log_group_arn}:*"]
   }
+
+  statement {
+    actions   = ["glue:GetTable", "glue:GetTableVersion", "glue:GetTableVersions"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_kinesis_firehose_delivery_stream" "this" {
   name        = "${var.stream_name}-firehose"
   destination = "extended_s3"
-
-  kinesis_source_configuration {
-    kinesis_stream_arn = aws_kinesis_stream.this.arn
-    role_arn           = aws_iam_role.firehose.arn
-  }
 
   extended_s3_configuration {
     bucket_arn         = "arn:aws:s3:::${var.firehose_bucket_name}"
@@ -156,17 +141,22 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
   tags = local.merged_tags
 }
 
-output "stream_arn" {
-  description = "ARN of the Kinesis data stream."
-  value       = aws_kinesis_stream.this.arn
-}
-
 output "firehose_arn" {
   description = "ARN of the Firehose delivery stream."
   value       = aws_kinesis_firehose_delivery_stream.this.arn
 }
 
+output "firehose_name" {
+  description = "Name of the Firehose delivery stream."
+  value       = aws_kinesis_firehose_delivery_stream.this.name
+}
+
 output "glue_table_name" {
   description = "Glue table receiving telemetry schema."
   value       = aws_glue_catalog_table.this.name
+}
+
+output "stream_arn" {
+  description = "(Deprecated) ARN of the Kinesis data stream."
+  value       = null
 }

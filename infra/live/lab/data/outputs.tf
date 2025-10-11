@@ -18,14 +18,19 @@ output "dynamodb_stream_arn" {
   description = "DynamoDB stream ARN for telemetry table."
 }
 
-output "kinesis_stream_arn" {
-  value       = module.telemetry_stream.stream_arn
-  description = "Kinesis data stream ARN."
-}
-
 output "kinesis_firehose_arn" {
   value       = module.telemetry_stream.firehose_arn
   description = "Firehose delivery stream ARN."
+}
+
+output "kinesis_stream_arn" {
+  value       = null
+  description = "Deprecated output retained for compatibility; the lab stack no longer provisions a Kinesis data stream."
+}
+
+output "kinesis_firehose_name" {
+  value       = module.telemetry_stream.firehose_name
+  description = "Name of the telemetry Firehose delivery stream."
 }
 
 output "logs_kms_key_arn" {

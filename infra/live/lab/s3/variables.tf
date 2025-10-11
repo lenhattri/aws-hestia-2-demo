@@ -16,6 +16,30 @@ variable "is_lab" {
   default     = true
 }
 
+variable "az_count" {
+  description = "Number of availability zones to span in supporting modules."
+  type        = number
+  default     = 2
+}
+
+variable "enable_nat_gateway" {
+  description = "Toggle NAT gateway creation in supporting stacks."
+  type        = bool
+  default     = false
+}
+
+variable "enable_interface_vpce" {
+  description = "Enable interface VPC endpoints in dependent stacks."
+  type        = bool
+  default     = false
+}
+
+variable "enable_gateway_s3_ddb" {
+  description = "Enable gateway endpoints for S3 and DynamoDB in dependent stacks."
+  type        = bool
+  default     = false
+}
+
 variable "backend_bucket" {
   type = string
 }
@@ -57,7 +81,7 @@ variable "eks_node_max" {
 
 variable "kinesis_mode" {
   type    = string
-  default = "provisioned"
+  default = "firehose-only"
 }
 
 variable "kinesis_shards" {

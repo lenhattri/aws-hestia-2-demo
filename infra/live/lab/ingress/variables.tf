@@ -33,6 +33,26 @@ variable "is_lab" {
   default = true
 }
 
+variable "az_count" {
+  type    = number
+  default = 2
+}
+
+variable "enable_nat_gateway" {
+  type    = bool
+  default = false
+}
+
+variable "enable_interface_vpce" {
+  type    = bool
+  default = false
+}
+
+variable "enable_gateway_s3_ddb" {
+  type    = bool
+  default = false
+}
+
 variable "backend_bucket" {
   type = string
 }
@@ -64,7 +84,7 @@ variable "eks_node_max" {
 
 variable "kinesis_mode" {
   type    = string
-  default = "provisioned"
+  default = "firehose-only"
 }
 
 variable "kinesis_shards" {

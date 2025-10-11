@@ -25,13 +25,25 @@ variable "cidr_block" {
 variable "az_count" {
   description = "Number of availability zones to span."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "enable_nat_gateway" {
   description = "Toggle NAT gateway creation."
   type        = bool
-  default     = true
+  default     = false
+}
+
+variable "enable_interface_vpce" {
+  description = "Enable creation of interface VPC endpoints in supporting stacks."
+  type        = bool
+  default     = false
+}
+
+variable "enable_gateway_s3_ddb" {
+  description = "Enable gateway endpoints for S3 and DynamoDB in supporting stacks."
+  type        = bool
+  default     = false
 }
 
 variable "is_lab" {
@@ -87,7 +99,7 @@ variable "eks_node_max" {
 
 variable "kinesis_mode" {
   type    = string
-  default = "provisioned"
+  default = "firehose-only"
 }
 
 variable "kinesis_shards" {

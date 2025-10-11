@@ -21,7 +21,6 @@ locals {
 resource "aws_cloudwatch_log_group" "cluster" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
   retention_in_days = local.log_retention
-  kms_key_id        = var.log_kms_key_arn
   tags              = local.merged_tags
 }
 
