@@ -15,13 +15,13 @@ variable "database_name" {
 }
 
 variable "dynamodb_table_name" {
-  type        = string
-  default     = "lab-iot-telemetry"
+  type    = string
+  default = "lab-iot-telemetry"
 }
 
 variable "stream_name" {
-  type        = string
-  default     = "lab-iot-telemetry"
+  type    = string
+  default = "lab-iot-telemetry"
 }
 
 variable "is_lab" {
@@ -62,4 +62,43 @@ variable "rds_instance_class" {
 variable "enable_rds_proxy" {
   type    = bool
   default = false
+}
+
+variable "backend_bucket" {
+  type = string
+}
+
+variable "backend_region" {
+  type    = string
+  default = "ap-southeast-1"
+}
+
+variable "enable_waf" {
+  type    = bool
+  default = false
+}
+
+variable "enable_ssm_bastion" {
+  type    = bool
+  default = true
+}
+
+variable "enable_legacy_ec2_asg" {
+  type    = bool
+  default = false
+}
+
+variable "eks_instance_type" {
+  type    = string
+  default = "t3.micro"
+}
+
+variable "eks_node_min" {
+  type    = number
+  default = 1
+}
+
+variable "eks_node_max" {
+  type    = number
+  default = 2
 }

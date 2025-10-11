@@ -15,7 +15,7 @@ data "aws_ssm_parameter" "eks_ami" {
 }
 
 locals {
-  resolved_node_ami_id = var.node_ami_id != "" ? var.node_ami_id : jsondecode(data.aws_ssm_parameter.eks_ami.value).image_id
+  resolved_node_ami_id = var.node_ami_id != "" ? var.node_ami_id : data.aws_ssm_parameter.eks_ami.value
 }
 
 resource "aws_cloudwatch_log_group" "cluster" {
