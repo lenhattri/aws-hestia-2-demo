@@ -1,0 +1,151 @@
+name: terraform
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: "1"
+  AWS_REGION: ap-southeast-1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.2
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.51.1
+      - name: Terraform fmt check
+        working-directory: infra
+        run: terraform fmt -check -recursive
+      - name: TFLint
+        working-directory: infra
+        run: tflint --recursive
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working-directory: infra
+
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        stack:
+          - live/dev/vpc
+          - live/dev/endpoints
+          - live/dev/data
+          - live/dev/eks
+          - live/dev/ingress
+          - live/dev/compute
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.2
+      - name: Terraform Init
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform init -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Terraform Plan
+        id: plan
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform plan -input=false -out=tfplan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.stack }}-plan
+          path: infra/${{ matrix.stack }}/tfplan
+
+  apply:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        stack:
+          - live/prod/vpc
+          - live/prod/endpoints
+          - live/prod/data
+          - live/prod/eks
+          - live/prod/ingress
+          - live/prod/compute
+    environment:
+      name: production
+      url: https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.2
+      - name: Terraform Init
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform init -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Terraform Apply
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform apply -input=false -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+  drift-detect:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - live/prod/vpc
+          - live/prod/endpoints
+          - live/prod/data
+          - live/prod/eks
+          - live/prod/ingress
+          - live/prod/compute
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.2
+      - name: Terraform Init
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform init -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Terraform Plan (Drift)
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform plan -input=false -detailed-exitcode
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
