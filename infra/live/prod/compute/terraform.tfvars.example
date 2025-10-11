@@ -1,0 +1,8 @@
+bastion_instance_type      = "t3.small"
+legacy_instance_type       = "m6i.large"
+legacy_desired_capacity    = 3
+legacy_min_size            = 3
+legacy_max_size            = 6
+iot_rule_sql               = "SELECT * FROM 'devices/+/telemetry'"
+iot_partition_key_template = "$${topic(2)}"
+provisioning_role_name     = "prod-iot-provisioning"

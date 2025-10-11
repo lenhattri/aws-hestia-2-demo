@@ -1,0 +1,5 @@
+database_name           = "iotdata"
+aurora_instance_class   = "db.r7g.large"
+aurora_instance_count   = 2
+dynamodb_table_name     = "stage-iot-telemetry"
+stream_name             = "stage-iot-telemetry"

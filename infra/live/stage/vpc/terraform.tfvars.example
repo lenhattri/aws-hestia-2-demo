@@ -1,0 +1,18 @@
+name_prefix = "stage-network"
+cidr_block  = "10.20.0.0/16"
+public_subnets = [
+  { az = "ap-southeast-1a", cidr = "10.20.0.0/20" },
+  { az = "ap-southeast-1b", cidr = "10.20.16.0/20" },
+  { az = "ap-southeast-1c", cidr = "10.20.32.0/20" }
+]
+private_subnets = [
+  { az = "ap-southeast-1a", cidr = "10.20.48.0/20" },
+  { az = "ap-southeast-1b", cidr = "10.20.64.0/20" },
+  { az = "ap-southeast-1c", cidr = "10.20.80.0/20" }
+]
+isolated_subnets = [
+  { az = "ap-southeast-1a", cidr = "10.20.96.0/24" },
+  { az = "ap-southeast-1b", cidr = "10.20.100.0/24" },
+  { az = "ap-southeast-1c", cidr = "10.20.104.0/24" }
+]
+flow_log_kms_key_arn = "arn:aws:kms:ap-southeast-1:123456789012:key/flow-log-key"

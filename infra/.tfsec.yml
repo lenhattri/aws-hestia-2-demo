@@ -1,0 +1,4 @@
+severity_overrides:
+  aws-ec2-no-public-ip-subnet: HIGH
+  aws-ec2-enable-at-rest-encryption: CRITICAL
+soft_fail: false
