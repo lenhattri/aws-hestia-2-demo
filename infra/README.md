@@ -19,52 +19,115 @@ Key goals:
 
 ## High-level Architecture
 ```mermaid
-graph TD
-  subgraph Ingestion
-    device(Device Fleet)
-    iot[AWS IoT Core]
-    device --> iot
-    iot --> rule(IoT Rule)
-  end
+flowchart LR
+  %% ====== STYLE ======
+  classDef zone fill:#f3f4f6,stroke:#8c8c8c,color:#111,stroke-width:1px;
+  classDef compute fill:#fff7e6,stroke:#d48806,color:#111;
+  classDef data fill:#eef7ff,stroke:#5b9bd5,color:#111;
+  classDef net fill:#e6fffb,stroke:#13c2c2,color:#111;
 
-  subgraph Streaming
-    rule --> kinesis[Kinesis Data Stream]
-    kinesis --> firehose[Firehose]
-    firehose --> s3[S3 Data Lake]
-    firehose --> glue[Glue Catalog]
-    s3 --> athena[Athena]
+  %% ====== EDGE & CLIENTS (separate from IoT Devices) ======
+  subgraph EDGE["Edge & Clients"]
+    direction TB
+    clients["Users / Browsers / Mobile"]
   end
+  class EDGE zone
 
-  subgraph Compute
-    eks[EKS Cluster]
-    alb[Application Load Balancer]
-    legacy[Legacy EC2 ASG]
-    bastion[SSM Bastion]
-    alb --> eks
-    alb --> legacy
+  %% ====== IOT DEVICES (separate block) ======
+  subgraph DEV["IoT Devices"]
+    direction TB
+    iotdev["Sensors / Gateways / Embedded"]
   end
+  class DEV zone
 
-  subgraph Data
-    aurora[Aurora PostgreSQL + Proxy]
-    dynamo[DynamoDB Telemetry]
+  %% ====== INGESTION ======
+  subgraph ING["Ingestion"]
+    direction TB
+    iotcore["AWS IoT Core"]
+    iotrule["IoT Rule"]
+    iotcore --> iotrule
   end
+  class ING zone
 
-  subgraph Networking
-    vpc[VPC (3 AZs)]
-    endpoints[VPC Endpoints]
+  %% ====== STREAMING & ANALYTICS ======
+  subgraph STRM["Streaming & Analytics"]
+    direction TB
+    kds["Kinesis Data Stream"]
+    firehose["Kinesis Firehose"]
+    s3["S3 Data Lake"]
+    glue["Glue Catalog"]
+    athena["Athena"]
+    iotrule --> kds --> firehose
+    firehose --> s3
+    firehose --> glue
+    s3 --> athena
   end
+  class STRM zone
 
-  kinesis --> dynamo
-  eks --> aurora
+  %% ====== DATA TIER ======
+  subgraph DATA["Data"]
+    direction TB
+    aurora["Aurora PostgreSQL + Proxy"]
+    dynamo["DynamoDB (via VPC Endpoints)"]
+  end
+  class DATA data
+
+  %% ====== VPC with CIDR & Subnets (Networking + Security as concrete blocks) ======
+  subgraph VPC["VPC 10.0.0.0/16 (3 AZs)"]
+    direction LR
+
+    %% Public Subnets
+    subgraph PUBLIC["Public Subnets 10.0.0.0/24 • 10.0.3.0/24 • 10.0.6.0/24"]
+      direction TB
+      waf["AWS WAF (assoc. ALB)"]
+      alb["Application Load Balancer"]
+      bastion["SSM Bastion (no inbound)"]
+      nat["Managed NAT Gateways"]
+      waf --> alb
+    end
+
+    %% Private Subnets
+    subgraph PRIVATE["Private Subnets 10.0.1.0/24 • 10.0.4.0/24 • 10.0.7.0/24"]
+      direction TB
+      eks["EKS Nodegroups (IRSA, private API)"]
+      legacy["Legacy EC2 ASG (IMDSv2)"]
+    end
+
+    %% Isolated Subnets
+    subgraph ISOL["Isolated Subnets 10.0.2.0/24 • 10.0.5.0/24 • 10.0.8.0/24"]
+      direction TB
+      aur["Aurora Cluster + RDS Proxy"]
+      vpce["VPC Endpoints (S3, DynamoDB, STS, ECR, CW Logs, Secrets, SSM)"]
+    end
+  end
+  class VPC net
+  class PUBLIC,PRIVATE,ISOL zone
+  class alb,bastion,waf,nat compute
+  class eks,legacy compute
+  class aur data
+
+  %% ====== TRAFFIC FLOW (no edge labels to keep GitHub parser happy) ======
+  %% External clients into ALB
+  clients --> waf
+  %% IoT devices into IoT Core
+  iotdev --> iotcore
+
+  %% App traffic to data
+  eks --> aur
   eks --> dynamo
-  legacy --> aurora
-  vpc --> eks
-  vpc --> alb
-  vpc --> legacy
-  vpc --> bastion
-  vpc --> endpoints
-  vpc --> aurora
-  vpc --> dynamo
+  legacy --> aur
+
+  %% Streaming to data store
+  kds --> dynamo
+
+  %% Place VPC envelope connections (visual anchoring)
+  alb --> eks
+  alb --> legacy
+  bastion --> eks
+  aur --> vpce
+  dynamo --> vpce
+  s3 --> vpce
+
 ```
 
 ## Networking Layout
