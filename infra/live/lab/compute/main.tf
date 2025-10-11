@@ -1,22 +1,18 @@
 data "terraform_remote_state" "vpc" {
   backend = "s3"
   config = {
-    bucket         = "aws-hestia-system-demo-tfstate"
-    key            = "lab/vpc/terraform.tfstate"
-    region         = var.region
-    dynamodb_table = "aws-hestia-system-demo-tf-locks"
-    encrypt        = true
+    bucket = var.backend_bucket
+    key    = "lab/vpc/terraform.tfstate"
+    region = var.backend_region
   }
 }
 
 data "terraform_remote_state" "ingress" {
   backend = "s3"
   config = {
-    bucket         = "aws-hestia-system-demo-tfstate"
-    key            = "lab/ingress/terraform.tfstate"
-    region         = var.region
-    dynamodb_table = "aws-hestia-system-demo-tf-locks"
-    encrypt        = true
+    bucket = var.backend_bucket
+    key    = "lab/ingress/terraform.tfstate"
+    region = var.backend_region
   }
 }
 

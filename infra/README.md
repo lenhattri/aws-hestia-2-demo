@@ -241,5 +241,17 @@ infra/
 └── README.md              # (this file)
 ```
 
+### LAB run notes
+Export these before apply:
+```bash
+export TF_VAR_backend_bucket="$TF_STATE_BUCKET"
+export TF_VAR_backend_region="ap-southeast-1"
+
+
+Then run each stack with:
+
+terraform apply -auto-approve -var-file=../../../env-profiles/terraform.tfvars.lab
+```
+
 ## Conclusion
 **AWS Hestia System Demo — your foundation for resilient IoT cloud infrastructure.**
