@@ -20,113 +20,106 @@ Key goals:
 ## High-level Architecture
 ```mermaid
 flowchart LR
-  %% ====== STYLE ======
+
+  %% ====== STYLES ======
   classDef zone fill:#f3f4f6,stroke:#8c8c8c,color:#111,stroke-width:1px;
   classDef compute fill:#fff7e6,stroke:#d48806,color:#111;
   classDef data fill:#eef7ff,stroke:#5b9bd5,color:#111;
   classDef net fill:#e6fffb,stroke:#13c2c2,color:#111;
+  classDef cidr fill:#ffffff,stroke:#bfbfbf,color:#333,stroke-dasharray: 5 4;
 
-  %% ====== EDGE & CLIENTS (separate from IoT Devices) ======
+  %% ====== LEFT: EDGE & IOT ======
   subgraph EDGE["Edge & Clients"]
-    direction TB
-    clients["Users / Browsers / Mobile"]
+    clients["Users / Web / Mobile Clients"]
   end
   class EDGE zone
 
-  %% ====== IOT DEVICES (separate block) ======
-  subgraph DEV["IoT Devices"]
-    direction TB
-    iotdev["Sensors / Gateways / Embedded"]
+  subgraph IOT["IoT Devices"]
+    iotdev["Sensors / Gateways / Embedded Devices"]
   end
-  class DEV zone
+  class IOT zone
 
   %% ====== INGESTION ======
   subgraph ING["Ingestion"]
-    direction TB
     iotcore["AWS IoT Core"]
     iotrule["IoT Rule"]
     iotcore --> iotrule
   end
   class ING zone
 
-  %% ====== STREAMING & ANALYTICS ======
-  subgraph STRM["Streaming & Analytics"]
-    direction TB
+  %% ====== STREAMING ======
+  subgraph STRM["Streaming"]
     kds["Kinesis Data Stream"]
     firehose["Kinesis Firehose"]
-    s3["S3 Data Lake"]
-    glue["Glue Catalog"]
-    athena["Athena"]
     iotrule --> kds --> firehose
-    firehose --> s3
-    firehose --> glue
-    s3 --> athena
   end
   class STRM zone
 
-  %% ====== DATA TIER ======
-  subgraph DATA["Data"]
+  %% ====== CENTER: VPC (SUBNETS XẾP DỌC) ======
+  subgraph VPC["VPC 10.10.0.0/16 (3 AZs)"]
     direction TB
-    aurora["Aurora PostgreSQL + Proxy"]
-    dynamo["DynamoDB (via VPC Endpoints)"]
-  end
-  class DATA data
 
-  %% ====== VPC with CIDR & Subnets (Networking + Security as concrete blocks) ======
-  subgraph VPC["VPC 10.0.0.0/16 (3 AZs)"]
-    direction LR
-
-    %% Public Subnets
-    subgraph PUBLIC["Public Subnets 10.0.0.0/24 • 10.0.3.0/24 • 10.0.6.0/24"]
+    %% PUBLIC
+    subgraph PUBLIC["Public Subnets (/20)"]
       direction TB
-      waf["AWS WAF (assoc. ALB)"]
+      cidr_pub["CIDR: 10.10.0.0/20 · 10.10.16.0/20 · 10.10.32.0/20"]
+      waf["AWS WAF"]
       alb["Application Load Balancer"]
       bastion["SSM Bastion (no inbound)"]
-      nat["Managed NAT Gateways"]
+      nat["NAT Gateway (per AZ)"]
       waf --> alb
     end
 
-    %% Private Subnets
-    subgraph PRIVATE["Private Subnets 10.0.1.0/24 • 10.0.4.0/24 • 10.0.7.0/24"]
+    %% PRIVATE
+    subgraph PRIVATE["Private Subnets (/20)"]
       direction TB
-      eks["EKS Nodegroups (IRSA, private API)"]
+      cidr_prv["CIDR: 10.10.48.0/20 · 10.10.64.0/20 · 10.10.80.0/20"]
+      eks["EKS Cluster (private API, IRSA)"]
       legacy["Legacy EC2 ASG (IMDSv2)"]
     end
 
-    %% Isolated Subnets
-    subgraph ISOL["Isolated Subnets 10.0.2.0/24 • 10.0.5.0/24 • 10.0.8.0/24"]
+    %% ISOLATED (DATA INSIDE VPC)
+    subgraph ISOL["Isolated Subnets (/24)"]
       direction TB
-      aur["Aurora Cluster + RDS Proxy"]
+      cidr_iso["CIDR: 10.10.96.0/24 · 10.10.100.0/24 · 10.10.104.0/24"]
+      aur["Aurora PostgreSQL Cluster + RDS Proxy"]
       vpce["VPC Endpoints (S3, DynamoDB, STS, ECR, CW Logs, Secrets, SSM)"]
     end
   end
   class VPC net
   class PUBLIC,PRIVATE,ISOL zone
+  class cidr_pub,cidr_prv,cidr_iso cidr
   class alb,bastion,waf,nat compute
   class eks,legacy compute
   class aur data
 
-  %% ====== TRAFFIC FLOW (no edge labels to keep GitHub parser happy) ======
-  %% External clients into ALB
+  %% ====== RIGHT: REGIONAL SERVICES (OUTSIDE VPC) ======
+  subgraph REG["AWS Regional Services"]
+    s3["S3 Data Lake (SSE-KMS)"]
+    glue["Glue Data Catalog"]
+    athena["Athena"]
+    ddb["DynamoDB (Telemetry)"]
+    s3 --> athena
+    glue --> athena
+  end
+  class REG zone
+
+  %% ====== FLOWS (tối giản) ======
   clients --> waf
-  %% IoT devices into IoT Core
   iotdev --> iotcore
 
-  %% App traffic to data
-  eks --> aur
-  eks --> dynamo
-  legacy --> aur
+  firehose --> s3
 
-  %% Streaming to data store
-  kds --> dynamo
-
-  %% Place VPC envelope connections (visual anchoring)
   alb --> eks
   alb --> legacy
-  bastion --> eks
-  aur --> vpce
-  dynamo --> vpce
-  s3 --> vpce
+
+  eks --> aur
+  legacy --> aur
+
+  eks --> vpce
+  legacy --> vpce
+  vpce --> s3
+  vpce --> ddb
 
 ```
 
