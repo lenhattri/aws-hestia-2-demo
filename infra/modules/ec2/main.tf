@@ -2,6 +2,9 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "ec2"
   })
+
+  bastion_enabled = var.is_lab ? var.enable_ssm_bastion : true
+  legacy_enabled  = var.is_lab ? var.enable_legacy_ec2_asg : true
 }
 
 data "aws_ssm_parameter" "linux_ami" {
@@ -13,6 +16,7 @@ locals {
 }
 
 resource "aws_security_group" "bastion" {
+  count       = local.bastion_enabled ? 1 : 0
   name        = "${var.name}-bastion"
   description = "SSM bastion security group"
   vpc_id      = var.vpc_id
@@ -30,6 +34,7 @@ resource "aws_security_group" "bastion" {
 }
 
 resource "aws_security_group" "legacy" {
+  count       = local.legacy_enabled ? 1 : 0
   name        = "${var.name}-legacy"
   description = "Legacy compute security group"
   vpc_id      = var.vpc_id
@@ -39,7 +44,7 @@ resource "aws_security_group" "legacy" {
     from_port   = var.legacy_app_port
     to_port     = var.legacy_app_port
     protocol    = "tcp"
-    security_groups = [var.alb_security_group_id]
+    security_groups = var.alb_security_group_id != "" ? [var.alb_security_group_id] : []
   }
 
   egress {
@@ -86,6 +91,7 @@ resource "aws_iam_instance_profile" "this" {
 }
 
 resource "aws_launch_template" "bastion" {
+  count         = local.bastion_enabled ? 1 : 0
   name_prefix   = "${var.name}-bastion-"
   image_id      = local.resolved_ami_id
   instance_type = var.bastion_instance_type
@@ -102,6 +108,7 @@ resource "aws_launch_template" "bastion" {
 }
 
 resource "aws_autoscaling_group" "bastion" {
+  count                     = local.bastion_enabled ? 1 : 0
   name                      = "${var.name}-bastion"
   max_size                  = 1
   min_size                  = 1
@@ -109,27 +116,27 @@ resource "aws_autoscaling_group" "bastion" {
   vpc_zone_identifier       = var.bastion_subnet_ids
   health_check_type         = "EC2"
   launch_template {
-    id      = aws_launch_template.bastion.id
-    version = aws_launch_template.bastion.latest_version
+    id      = aws_launch_template.bastion[0].id
+    version = aws_launch_template.bastion[0].latest_version
   }
   enabled_metrics = ["GroupInServiceInstances", "GroupDesiredCapacity"]
-  tags = [
-    {
-      key                 = "Name"
-      value               = "${var.name}-bastion"
-      propagate_at_launch = true
-    }
-  ]
+
+  tag {
+    key                 = "Name"
+    value               = "${var.name}-bastion"
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_launch_template" "legacy" {
+  count         = local.legacy_enabled ? 1 : 0
   name_prefix   = "${var.name}-legacy-"
   image_id      = local.resolved_ami_id
   instance_type = var.legacy_instance_type
   iam_instance_profile {
     arn = aws_iam_instance_profile.this.arn
   }
-  vpc_security_group_ids = [aws_security_group.legacy.id]
+  vpc_security_group_ids = local.legacy_enabled ? [aws_security_group.legacy[0].id] : []
   metadata_options {
     http_tokens = "required"
   }
@@ -141,37 +148,37 @@ resource "aws_launch_template" "legacy" {
 }
 
 resource "aws_autoscaling_group" "legacy" {
+  count               = local.legacy_enabled ? 1 : 0
   name                = "${var.name}-legacy"
   max_size            = var.legacy_max_size
   min_size            = var.legacy_min_size
   desired_capacity    = var.legacy_desired_capacity
   vpc_zone_identifier = var.legacy_subnet_ids
   health_check_type   = "ELB"
-  target_group_arns   = [var.alb_target_group_arn]
+  target_group_arns   = var.alb_target_group_arn != "" ? [var.alb_target_group_arn] : []
 
   launch_template {
-    id      = aws_launch_template.legacy.id
-    version = aws_launch_template.legacy.latest_version
+    id      = aws_launch_template.legacy[0].id
+    version = aws_launch_template.legacy[0].latest_version
   }
 
   enabled_metrics = ["GroupInServiceInstances", "GroupDesiredCapacity"]
-  tags = [
-    {
-      key                 = "Name"
-      value               = "${var.name}-legacy"
-      propagate_at_launch = true
-    }
-  ]
+
+  tag {
+    key                 = "Name"
+    value               = "${var.name}-legacy"
+    propagate_at_launch = true
+  }
 }
 
 output "bastion_security_group_id" {
   description = "Security group for the bastion hosts."
-  value       = aws_security_group.bastion.id
+  value       = local.bastion_enabled ? aws_security_group.bastion[0].id : null
 }
 
 output "legacy_security_group_id" {
   description = "Security group for legacy application instances."
-  value       = aws_security_group.legacy.id
+  value       = local.legacy_enabled ? aws_security_group.legacy[0].id : null
 }
 
 output "instance_profile_arn" {

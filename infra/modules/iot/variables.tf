@@ -35,3 +35,9 @@ variable "default_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "is_lab" {
+  description = "Flag indicating whether to apply lab-oriented defaults."
+  type        = bool
+  default     = false
+}

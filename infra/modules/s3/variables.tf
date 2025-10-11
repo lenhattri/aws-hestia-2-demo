@@ -13,3 +13,9 @@ variable "default_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "is_lab" {
+  description = "Flag indicating whether the deployment targets the lab environment."
+  type        = bool
+  default     = false
+}

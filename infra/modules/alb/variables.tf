@@ -21,6 +21,7 @@ variable "certificate_arn" {
 variable "waf_acl_arn" {
   description = "WAFv2 Web ACL ARN associated with the ALB."
   type        = string
+  default     = ""
 }
 
 variable "ingress_cidr_blocks" {
@@ -87,4 +88,22 @@ variable "default_tags" {
   description = "Default tags."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether lab optimisations should apply."
+  type        = bool
+  default     = false
+}
+
+variable "enable_waf" {
+  description = "Toggle association of the WAF with the ALB."
+  type        = bool
+  default     = true
+}
+
+variable "enable_legacy_ec2_asg" {
+  description = "Control whether legacy EC2 target groups are created."
+  type        = bool
+  default     = true
 }

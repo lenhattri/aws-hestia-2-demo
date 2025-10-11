@@ -46,10 +46,22 @@ variable "log_retention_in_days" {
   default     = 30
 }
 
+variable "cloudwatch_log_retention_days" {
+  description = "Alternate log retention period when lab optimisations apply."
+  type        = number
+  default     = 30
+}
+
 variable "node_instance_type" {
   description = "Instance type for worker nodes."
   type        = string
   default     = "m6i.large"
+}
+
+variable "eks_instance_type" {
+  description = "Instance type override used for lab node groups."
+  type        = string
+  default     = "t3.medium"
 }
 
 variable "node_capacity_type" {
@@ -82,10 +94,22 @@ variable "node_min_size" {
   default     = 3
 }
 
+variable "eks_node_min" {
+  description = "Minimum node count used for lab node groups."
+  type        = number
+  default     = 2
+}
+
 variable "node_max_size" {
   description = "Maximum node count."
   type        = number
   default     = 9
+}
+
+variable "eks_node_max" {
+  description = "Maximum node count used for lab node groups."
+  type        = number
+  default     = 4
 }
 
 variable "node_ami_id" {
@@ -111,17 +135,17 @@ variable "irsa_roles" {
     alb = {
       namespace       = "kube-system"
       service_account = "aws-load-balancer-controller"
-      policy_json     = jsonencode({ "Version" = "2012-10-17", "Statement" = [] })
+      policy_json     = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
     }
     autoscaler = {
       namespace       = "kube-system"
       service_account = "cluster-autoscaler"
-      policy_json     = jsonencode({ "Version" = "2012-10-17", "Statement" = [] })
+      policy_json     = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
     }
     fluentbit = {
       namespace       = "kube-system"
       service_account = "fluent-bit"
-      policy_json     = jsonencode({ "Version" = "2012-10-17", "Statement" = [] })
+      policy_json     = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
     }
   }
   validation {
@@ -139,4 +163,10 @@ variable "default_tags" {
   description = "Default tags applied to all resources."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether lab sizing should be used."
+  type        = bool
+  default     = false
 }

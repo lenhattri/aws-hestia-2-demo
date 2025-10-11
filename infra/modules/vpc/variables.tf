@@ -49,8 +49,26 @@ variable "enable_nat_gateway" {
   default     = true
 }
 
+variable "is_lab" {
+  description = "Flag indicating whether the deployment targets the lab environment."
+  type        = bool
+  default     = false
+}
+
+variable "az_count" {
+  description = "Number of availability zones to target."
+  type        = number
+  default     = 3
+}
+
 variable "flow_log_retention_in_days" {
   description = "Retention for VPC flow logs."
+  type        = number
+  default     = 30
+}
+
+variable "cloudwatch_log_retention_days" {
+  description = "Alternate retention period used when lab optimisations are enabled."
   type        = number
   default     = 30
 }
@@ -58,6 +76,7 @@ variable "flow_log_retention_in_days" {
 variable "flow_log_kms_key_arn" {
   description = "KMS key ARN for flow log encryption."
   type        = string
+  default     = null
 }
 
 variable "default_tags" {

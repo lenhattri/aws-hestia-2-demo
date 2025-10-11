@@ -41,10 +41,28 @@ variable "instance_class" {
   default     = "db.r7g.large"
 }
 
+variable "rds_instance_class" {
+  description = "Instance class override for lab workloads."
+  type        = string
+  default     = "db.r7g.large"
+}
+
 variable "instance_count" {
   description = "Number of Aurora instances to create."
   type        = number
   default     = 2
+}
+
+variable "rds_deployment" {
+  description = "Deployment model (multi_az|single_az|serverless_v2)."
+  type        = string
+  default     = "multi_az"
+}
+
+variable "enable_rds_proxy" {
+  description = "Toggle creation of the RDS Proxy in lab mode."
+  type        = bool
+  default     = true
 }
 
 variable "storage_kms_key_arn" {
@@ -91,4 +109,10 @@ variable "default_tags" {
   description = "Default tags applied to resources."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether to apply lab sizing."
+  type        = bool
+  default     = false
 }

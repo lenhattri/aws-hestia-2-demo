@@ -2,6 +2,11 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "s3"
   })
+
+  versioning_status       = var.is_lab ? "Suspended" : "Enabled"
+  telemetry_transition_1  = var.is_lab ? 30 : 90
+  telemetry_transition_2  = var.is_lab ? 60 : 180
+  logs_expiration_in_days = var.is_lab ? 30 : 365
 }
 
 locals {
@@ -35,7 +40,7 @@ resource "aws_s3_bucket_versioning" "this" {
 
   bucket = each.value.id
   versioning_configuration {
-    status = "Enabled"
+    status = local.versioning_status
   }
 }
 
@@ -70,12 +75,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "telemetry" {
     status = "Enabled"
 
     transition {
-      days          = 90
+      days          = local.telemetry_transition_1
       storage_class = "STANDARD_IA"
     }
 
     transition {
-      days          = 180
+      days          = local.telemetry_transition_2
       storage_class = "GLACIER"
     }
   }
@@ -89,7 +94,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
     status = "Enabled"
 
     expiration {
-      days = 365
+      days = local.logs_expiration_in_days
     }
   }
 }

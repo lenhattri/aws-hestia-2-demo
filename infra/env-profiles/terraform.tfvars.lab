@@ -1,0 +1,24 @@
+# LAB profile – one-hour test, ultra-low cost
+is_lab = true
+az_count = 1
+enable_nat_gateway = false
+enable_interface_vpce = false
+enable_gateway_s3_ddb = true
+enable_waf = false
+cloudwatch_log_retention_days = 3
+
+eks_instance_type = "t3.micro"
+eks_node_min = 1
+eks_node_max = 2
+
+kinesis_mode = "provisioned"
+kinesis_shards = 1
+
+dynamodb_billing_mode = "PAY_PER_REQUEST"
+
+rds_deployment = "single_az"
+rds_instance_class = "db.t4g.micro"
+enable_rds_proxy = false
+
+enable_legacy_ec2_asg = false
+enable_ssm_bastion = true

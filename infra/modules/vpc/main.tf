@@ -47,9 +47,13 @@ resource "aws_nat_gateway" "this" {
   depends_on = [aws_internet_gateway.this]
 }
 
+locals {
+  flow_log_retention = var.is_lab ? var.cloudwatch_log_retention_days : var.flow_log_retention_in_days
+}
+
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/aws/vpc/${var.name}/flow-logs"
-  retention_in_days = var.flow_log_retention_in_days
+  retention_in_days = local.flow_log_retention
   kms_key_id        = var.flow_log_kms_key_arn
   tags              = local.merged_tags
 }
@@ -168,17 +172,11 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route" "private_nat" {
-  for_each = aws_route_table.private
+  for_each = var.enable_nat_gateway ? aws_route_table.private : {}
 
   route_table_id         = each.value.id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = try(aws_nat_gateway.this[each.key].id, null)
-  lifecycle {
-    precondition {
-      condition     = var.enable_nat_gateway ? contains(keys(aws_nat_gateway.this), each.key) : true
-      error_message = "NAT gateway missing for AZ ${each.key}."
-    }
-  }
+  nat_gateway_id         = aws_nat_gateway.this[each.key].id
 }
 
 resource "aws_route_table_association" "private" {
