@@ -58,7 +58,13 @@ graph TD
   eks --> aurora
   eks --> dynamo
   legacy --> aurora
-  vpc --> {eks, alb, legacy, bastion, endpoints, aurora, dynamo}
+  vpc --> eks
+  vpc --> alb
+  vpc --> legacy
+  vpc --> bastion
+  vpc --> endpoints
+  vpc --> aurora
+  vpc --> dynamo
 ```
 
 ## Networking Layout
