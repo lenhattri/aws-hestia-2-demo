@@ -2,11 +2,13 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "dynamodb"
   })
+
+  billing_mode = var.is_lab ? upper(var.dynamodb_billing_mode) : var.billing_mode
 }
 
 resource "aws_dynamodb_table" "this" {
   name           = var.table_name
-  billing_mode   = var.billing_mode
+  billing_mode   = local.billing_mode
   hash_key       = var.partition_key
   range_key      = var.sort_key
   stream_enabled = true

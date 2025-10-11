@@ -2,6 +2,9 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "alb"
   })
+
+  legacy_enabled = var.is_lab ? var.enable_legacy_ec2_asg : true
+  waf_enabled    = var.is_lab ? var.enable_waf : true
 }
 
 resource "aws_security_group" "alb" {
@@ -63,6 +66,7 @@ resource "aws_lb_target_group" "eks" {
 }
 
 resource "aws_lb_target_group" "ec2" {
+  count       = local.legacy_enabled ? 1 : 0
   name        = "${var.name}-ec2"
   port        = var.ec2_target_port
   protocol    = "HTTP"
@@ -88,6 +92,7 @@ resource "aws_lb_target_group" "ec2" {
 }
 
 resource "aws_lb_listener" "https" {
+  count             = var.certificate_arn != "" ? 1 : 0
   load_balancer_arn = aws_lb.this.arn
   port              = 443
   protocol          = "HTTPS"
@@ -100,8 +105,20 @@ resource "aws_lb_listener" "https" {
   }
 }
 
+resource "aws_lb_listener" "http" {
+  count             = var.certificate_arn == "" ? 1 : 0
+  load_balancer_arn = aws_lb.this.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.eks.arn
+  }
+}
+
 resource "aws_lb_listener_rule" "eks" {
-  listener_arn = aws_lb_listener.https.arn
+  listener_arn = var.certificate_arn != "" ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
   priority     = 100
 
   action {
@@ -117,12 +134,13 @@ resource "aws_lb_listener_rule" "eks" {
 }
 
 resource "aws_lb_listener_rule" "ec2" {
-  listener_arn = aws_lb_listener.https.arn
+  count        = local.legacy_enabled ? 1 : 0
+  listener_arn = var.certificate_arn != "" ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
   priority     = 200
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.ec2.arn
+    target_group_arn = aws_lb_target_group.ec2[0].arn
   }
 
   condition {
@@ -133,6 +151,7 @@ resource "aws_lb_listener_rule" "ec2" {
 }
 
 resource "aws_wafv2_web_acl_association" "this" {
+  count        = local.waf_enabled && var.waf_acl_arn != "" ? 1 : 0
   resource_arn = aws_lb.this.arn
   web_acl_arn  = var.waf_acl_arn
 }
@@ -154,7 +173,7 @@ output "eks_target_group_arn" {
 
 output "ec2_target_group_arn" {
   description = "Target group ARN for EC2 services."
-  value       = aws_lb_target_group.ec2.arn
+  value       = local.legacy_enabled ? aws_lb_target_group.ec2[0].arn : null
 }
 
 output "security_group_id" {

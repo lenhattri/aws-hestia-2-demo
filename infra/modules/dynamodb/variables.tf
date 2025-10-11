@@ -44,6 +44,12 @@ variable "billing_mode" {
   default     = "PAY_PER_REQUEST"
 }
 
+variable "dynamodb_billing_mode" {
+  description = "Billing mode override for lab deployments."
+  type        = string
+  default     = "PROVISIONED"
+}
+
 variable "table_class" {
   description = "DynamoDB table class."
   type        = string
@@ -73,4 +79,10 @@ variable "default_tags" {
   description = "Default tags applied to resources."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether lab optimisations apply."
+  type        = bool
+  default     = false
 }

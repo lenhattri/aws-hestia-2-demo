@@ -2,6 +2,12 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "eks"
   })
+
+  log_retention = var.is_lab ? var.cloudwatch_log_retention_days : var.log_retention_in_days
+  node_instance_type = var.is_lab ? var.eks_instance_type : var.node_instance_type
+  node_min_size      = var.is_lab ? var.eks_node_min : var.node_min_size
+  node_max_size      = var.is_lab ? var.eks_node_max : var.node_max_size
+  node_desired_size  = min(max(var.node_desired_size, local.node_min_size), local.node_max_size)
 }
 
 data "aws_ssm_parameter" "eks_ami" {
@@ -14,7 +20,7 @@ locals {
 
 resource "aws_cloudwatch_log_group" "cluster" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
-  retention_in_days = var.log_retention_in_days
+  retention_in_days = local.log_retention
   kms_key_id        = var.log_kms_key_arn
   tags              = local.merged_tags
 }
@@ -120,7 +126,7 @@ resource "aws_iam_role_policy_attachment" "node_policies" {
 resource "aws_launch_template" "node" {
   name_prefix   = "${var.cluster_name}-lt-"
   image_id      = local.resolved_node_ami_id
-  instance_type = var.node_instance_type
+  instance_type = local.node_instance_type
 
   update_default_version = true
 
@@ -157,9 +163,9 @@ resource "aws_eks_node_group" "this" {
   subnet_ids      = var.private_subnet_ids
 
   scaling_config {
-    desired_size = var.node_desired_size
-    max_size     = var.node_max_size
-    min_size     = var.node_min_size
+    desired_size = local.node_desired_size
+    max_size     = local.node_max_size
+    min_size     = local.node_min_size
   }
 
   update_config {

@@ -2,6 +2,11 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "rds"
   })
+
+  deployment_mode          = lower(var.rds_deployment)
+  effective_instance_class = var.is_lab ? var.rds_instance_class : var.instance_class
+  effective_instance_count = var.is_lab && local.deployment_mode == "single_az" ? 1 : var.instance_count
+  proxy_enabled            = var.is_lab ? var.enable_rds_proxy : true
 }
 
 resource "random_password" "master" {
@@ -74,10 +79,10 @@ resource "aws_rds_cluster" "this" {
 }
 
 resource "aws_rds_cluster_instance" "this" {
-  count              = var.instance_count
+  count              = local.effective_instance_count
   identifier         = "${var.name}-aurora-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.this.id
-  instance_class     = var.instance_class
+  instance_class     = local.effective_instance_class
   engine             = aws_rds_cluster.this.engine
   engine_version     = aws_rds_cluster.this.engine_version
   publicly_accessible = false
@@ -86,6 +91,7 @@ resource "aws_rds_cluster_instance" "this" {
 }
 
 resource "aws_iam_role" "proxy" {
+  count              = local.proxy_enabled ? 1 : 0
   name               = "${var.name}-rds-proxy"
   assume_role_policy = data.aws_iam_policy_document.proxy_assume.json
   tags               = local.merged_tags
@@ -102,8 +108,9 @@ data "aws_iam_policy_document" "proxy_assume" {
 }
 
 resource "aws_iam_role_policy" "proxy" {
+  count  = local.proxy_enabled ? 1 : 0
   name   = "${var.name}-rds-proxy"
-  role   = aws_iam_role.proxy.id
+  role   = aws_iam_role.proxy[0].id
   policy = data.aws_iam_policy_document.proxy.json
 }
 
@@ -115,12 +122,13 @@ data "aws_iam_policy_document" "proxy" {
 }
 
 resource "aws_db_proxy" "this" {
+  count                 = local.proxy_enabled ? 1 : 0
   name                   = "${var.name}-proxy"
   debug_logging          = true
   engine_family          = "POSTGRESQL"
   idle_client_timeout    = 1800
   require_tls            = true
-  role_arn               = aws_iam_role.proxy.arn
+  role_arn               = aws_iam_role.proxy[0].arn
   vpc_security_group_ids = [aws_security_group.this.id]
   vpc_subnet_ids         = var.subnet_ids
 
@@ -134,7 +142,8 @@ resource "aws_db_proxy" "this" {
 }
 
 resource "aws_db_proxy_default_target_group" "this" {
-  db_proxy_name = aws_db_proxy.this.name
+  count         = local.proxy_enabled ? 1 : 0
+  db_proxy_name = aws_db_proxy.this[0].name
 
   connection_pool_config {
     connection_borrow_timeout    = 120
@@ -144,9 +153,10 @@ resource "aws_db_proxy_default_target_group" "this" {
 }
 
 resource "aws_db_proxy_target" "this" {
-  db_proxy_name          = aws_db_proxy.this.name
-  target_group_name      = aws_db_proxy_default_target_group.this.name
-  db_cluster_identifier  = aws_rds_cluster.this.id
+  count                 = local.proxy_enabled ? 1 : 0
+  db_proxy_name         = aws_db_proxy.this[0].name
+  target_group_name     = aws_db_proxy_default_target_group.this[0].name
+  db_cluster_identifier = aws_rds_cluster.this.id
 }
 
 output "cluster_arn" {
@@ -156,7 +166,7 @@ output "cluster_arn" {
 
 output "proxy_endpoint" {
   description = "Endpoint of the RDS proxy."
-  value       = aws_db_proxy.this.endpoint
+  value       = local.proxy_enabled ? aws_db_proxy.this[0].endpoint : null
 }
 
 output "secret_arn" {

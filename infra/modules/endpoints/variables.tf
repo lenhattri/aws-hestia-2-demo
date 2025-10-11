@@ -43,6 +43,24 @@ variable "interface_endpoints" {
   default = {}
 }
 
+variable "is_lab" {
+  description = "Flag indicating whether the lab footprint should be used."
+  type        = bool
+  default     = false
+}
+
+variable "enable_interface_vpce" {
+  description = "Toggle creation of interface VPC endpoints."
+  type        = bool
+  default     = true
+}
+
+variable "enable_gateway_s3_ddb" {
+  description = "Toggle creation of S3/DynamoDB gateway endpoints in lab mode."
+  type        = bool
+  default     = false
+}
+
 variable "default_tags" {
   description = "Tags applied to all resources."
   type        = map(string)

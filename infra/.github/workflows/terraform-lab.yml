@@ -1,0 +1,51 @@
+name: lab-iac
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: 'Stack folder (vpc|eks|ingress|...)'
+        required: true
+        default: 'eks'
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: infra/live/lab/${{ github.event.inputs.stack }} } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform plan -input=false -var-file=../../../env-profiles/terraform.tfvars.lab -out=tfplan.binary
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-lab-${{ github.event.inputs.stack }}
+          path: infra/live/lab/${{ github.event.inputs.stack }}/tfplan.binary
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init -input=false
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-lab-${{ github.event.inputs.stack }}
+          path: infra/live/lab/${{ github.event.inputs.stack }}
+      - run: terraform apply -input=false tfplan.binary
+
+  auto-destroy:
+    needs: apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: |
+          cd infra/live/lab/${{ github.event.inputs.stack }}
+          terraform init -input=false
+          echo "Sleeping 60 minutes before destroy..."
+          sleep 3600
+          terraform destroy -auto-approve -var-file=../../../env-profiles/terraform.tfvars.lab

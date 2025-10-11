@@ -21,11 +21,13 @@ variable "legacy_subnet_ids" {
 variable "alb_target_group_arn" {
   description = "Target group ARN for legacy instances."
   type        = string
+  default     = ""
 }
 
 variable "alb_security_group_id" {
   description = "Security group ID of the ALB."
   type        = string
+  default     = ""
 }
 
 variable "bastion_instance_type" {
@@ -84,4 +86,22 @@ variable "default_tags" {
   description = "Default tags applied to resources."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether lab-specific sizing applies."
+  type        = bool
+  default     = false
+}
+
+variable "enable_legacy_ec2_asg" {
+  description = "Toggle provisioning of the legacy EC2 auto scaling group in lab mode."
+  type        = bool
+  default     = true
+}
+
+variable "enable_ssm_bastion" {
+  description = "Toggle provisioning of the SSM bastion in lab mode."
+  type        = bool
+  default     = false
 }

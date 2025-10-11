@@ -9,6 +9,12 @@ variable "shard_count" {
   default     = 2
 }
 
+variable "kinesis_shards" {
+  description = "Shard count override used in lab mode."
+  type        = number
+  default     = 2
+}
+
 variable "retention_hours" {
   description = "Retention in hours for the stream."
   type        = number
@@ -19,6 +25,12 @@ variable "stream_mode" {
   description = "Stream mode (PROVISIONED or ON_DEMAND)."
   type        = string
   default     = "PROVISIONED"
+}
+
+variable "kinesis_mode" {
+  description = "Stream mode override used in lab deployments."
+  type        = string
+  default     = "provisioned"
 }
 
 variable "kms_key_arn" {
@@ -61,4 +73,10 @@ variable "default_tags" {
   description = "Default tags."
   type        = map(string)
   default     = {}
+}
+
+variable "is_lab" {
+  description = "Flag indicating whether lab sizing should be applied."
+  type        = bool
+  default     = false
 }

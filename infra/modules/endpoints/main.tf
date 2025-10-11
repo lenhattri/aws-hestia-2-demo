@@ -2,6 +2,10 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "vpc-endpoints"
   })
+
+  gateway_endpoints = var.is_lab ? (var.enable_gateway_s3_ddb ? { for k, v in var.gateway_endpoints : k => v if contains(["s3", "dynamodb"], v.service) } : {}) : var.gateway_endpoints
+
+  interface_endpoints = var.enable_interface_vpce ? var.interface_endpoints : {}
 }
 
 resource "aws_security_group" "endpoints" {
@@ -30,7 +34,7 @@ resource "aws_security_group" "endpoints" {
 }
 
 resource "aws_vpc_endpoint" "gateway" {
-  for_each = var.gateway_endpoints
+  for_each = local.gateway_endpoints
 
   vpc_id            = var.vpc_id
   service_name      = "com.amazonaws.${var.region}.${each.value.service}"
@@ -43,7 +47,7 @@ resource "aws_vpc_endpoint" "gateway" {
 }
 
 resource "aws_vpc_endpoint" "interface" {
-  for_each = var.interface_endpoints
+  for_each = local.interface_endpoints
 
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.${var.region}.${each.value.service}"

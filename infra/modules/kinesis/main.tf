@@ -2,16 +2,19 @@ locals {
   merged_tags = merge(var.default_tags, {
     Module = "kinesis"
   })
+
+  effective_shard_count = var.is_lab ? var.kinesis_shards : var.shard_count
+  effective_stream_mode = upper(var.is_lab ? var.kinesis_mode : var.stream_mode)
 }
 
 resource "aws_kinesis_stream" "this" {
   name             = var.stream_name
-  shard_count      = var.shard_count
+  shard_count      = local.effective_shard_count
   retention_period = var.retention_hours
   encryption_type  = "KMS"
   kms_key_id       = var.kms_key_arn
   stream_mode_details {
-    stream_mode = var.stream_mode
+    stream_mode = local.effective_stream_mode
   }
   tags = local.merged_tags
 }
@@ -39,17 +42,17 @@ resource "aws_glue_catalog_table" "this" {
       serialization_library = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
     }
 
-    column {
+    columns {
       name = "deviceid"
       type = "string"
     }
 
-    column {
+    columns {
       name = "timestamp"
       type = "string"
     }
 
-    column {
+    columns {
       name = "payload"
       type = "string"
     }
@@ -106,7 +109,6 @@ data "aws_iam_policy_document" "firehose" {
 resource "aws_kinesis_firehose_delivery_stream" "this" {
   name        = "${var.stream_name}-firehose"
   destination = "extended_s3"
-  kms_key_arn = var.kms_key_arn
 
   kinesis_source_configuration {
     kinesis_stream_arn = aws_kinesis_stream.this.arn
@@ -117,8 +119,8 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
     bucket_arn         = "arn:aws:s3:::${var.firehose_bucket_name}"
     prefix             = var.firehose_prefix
     error_output_prefix = "errors/!{timestamp:yyyy/MM/dd}/"
-    buffering_interval = 300
-    buffering_size     = 128
+    buffer_interval    = 300
+    buffer_size        = 128
     compression_format = "GZIP"
     kms_key_arn        = var.kms_key_arn
     role_arn           = aws_iam_role.firehose.arn
@@ -133,7 +135,7 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
 
       input_format_configuration {
         deserializer {
-          openx_json_ser_de {}
+          open_x_json_ser_de {}
         }
       }
 
